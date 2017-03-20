@@ -7,6 +7,7 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from markdown import markdown
 import requests
+import threading
 
 import config
 from microflack_common.auth import token_auth, token_optional_auth
@@ -29,17 +30,6 @@ class Message(db.Model):
     source = db.Column(db.Text, nullable=False)
     html = db.Column(db.Text, nullable=False)
     user_id = db.Column(db.Integer, nullable=False)
-
-    @staticmethod
-    def create(data, user_id=None, expand_links=True):
-        """Create a new message. The user is obtained from the context unless
-        provided explicitly.
-        """
-        msg = Message(user_id=user_id or g.jwt_claims['user_id'])
-        msg.from_dict(data, partial_update=False)
-        if expand_links:
-            msg.expand_links()
-        return msg
 
     def from_dict(self, data, partial_update=True):
         """Import message data from a dictionary."""
@@ -65,12 +55,12 @@ class Message(db.Model):
             }
         }
 
-    def render_markdown(self, source):
+    def render_markdown(self):
         """Render markdown source to HTML with a tag whitelist."""
         allowed_tags = ['a', 'abbr', 'acronym', 'b', 'code', 'em', 'i',
                         'strong']
         self.html = bleach.linkify(bleach.clean(
-            markdown(source, output_format='html'),
+            markdown(self.source, output_format='html'),
             tags=allowed_tags, strip=True))
 
     def expand_links(self):
@@ -104,13 +94,16 @@ class Message(db.Model):
                 changed = True
         return changed
 
-    @staticmethod
-    def on_changed_source(target, value, oldvalue, initiator):
-        """SQLAlchemy event that automatically renders the message to HTML."""
-        target.render_markdown(value)
 
-
-db.event.listen(Message.source, 'set', Message.on_changed_source)
+def render_message(id):
+    with app.app_context():
+        msg = Message.query.get(id)
+        if not msg:
+            return
+        msg.render_markdown()
+        db.session.commit()  # first update with rendered markdown
+        if (msg.expand_links()):
+            db.session.commit()  # final update with expanded links
 
 
 @app.route('/api/messages', methods=['POST'])
@@ -120,12 +113,24 @@ def new_message():
     Post a new message.
     This endpoint is requires a valid user token.
     """
-    msg = Message.create(request.get_json() or {})
+    msg = Message(user_id=g.jwt_claims['user_id'])
+    msg.from_dict(request.get_json(), partial_update=False)
+    msg.html = '...'
     db.session.add(msg)
     db.session.commit()
     r = jsonify(msg.to_dict())
     r.status_code = 201
     r.headers['Location'] = url_for('get_message', id=msg.id)
+
+    # render the markdown and expand the links in a background task
+    if app.config['TESTING']:
+        # for unit tests, render synchronously
+        render_message(msg.id)
+    else:
+        # asynchronous rendering
+        render_thread = threading.Thread(target=render_message,
+                                         args=(msg.id,))
+        render_thread.start()
     return r
 
 
@@ -172,6 +177,16 @@ def edit_message(id):
     msg.from_dict(request.get_json() or {})
     db.session.add(msg)
     db.session.commit()
+
+    # render the markdown and expand the links in a background task
+    if app.config['TESTING']:
+        # for unit tests, render synchronously
+        render_message(msg.id)
+    else:
+        # asynchronous rendering
+        render_thread = threading.Thread(target=render_message,
+                                         args=(msg.id,))
+        render_thread.start()
     return '', 204
 
 

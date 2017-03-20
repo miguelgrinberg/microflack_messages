@@ -118,7 +118,9 @@ class MessageTests(FlackTestCase):
                 data={'source': 'hello http://foo.com!'},
                 token_auth=token)
             self.assertEqual(s, 201)
-
+            url = h['Location']
+            r, s, h = self.get(url, token_auth=token)
+            self.assertEqual(s, 200)
             self.assertEqual(
                 r['html'],
                 'hello <a href="http://foo.com" rel="nofollow">'
@@ -130,7 +132,9 @@ class MessageTests(FlackTestCase):
                 data={'source': 'hello http://foo.com!'},
                 token_auth=token)
             self.assertEqual(s, 201)
-
+            url = h['Location']
+            r, s, h = self.get(url, token_auth=token)
+            self.assertEqual(s, 200)
             self.assertEqual(
                 r['html'],
                 'hello <a href="http://foo.com" rel="nofollow">'
@@ -142,7 +146,9 @@ class MessageTests(FlackTestCase):
                 data={'source': 'hello foo.com!'},
                 token_auth=token)
             self.assertEqual(s, 201)
-
+            url = h['Location']
+            r, s, h = self.get(url, token_auth=token)
+            self.assertEqual(s, 200)
             self.assertEqual(
                 r['html'],
                 'hello <a href="http://foo.com" rel="nofollow">'
@@ -154,7 +160,9 @@ class MessageTests(FlackTestCase):
                 data={'source': 'hello foo.com!'},
                 token_auth=token)
             self.assertEqual(s, 201)
-
+            url = h['Location']
+            r, s, h = self.get(url, token_auth=token)
+            self.assertEqual(s, 200)
             self.assertEqual(
                 r['html'],
                 'hello <a href="http://foo.com" rel="nofollow">'
