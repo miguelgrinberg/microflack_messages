@@ -11,7 +11,9 @@ import requests
 from microflack_common.auth import generate_token
 from microflack_common.test import FlackTestCase
 
-from app import app, db
+import app
+app.socketio = mock.MagicMock()
+from app import app, db, socketio
 
 
 class MessageTests(FlackTestCase):
@@ -34,6 +36,10 @@ class MessageTests(FlackTestCase):
         r, s, h = self.post('/api/messages', data={'source': 'hello *world*!'},
                             token_auth=token)
         self.assertEqual(s, 201)
+        self.assertEqual(socketio.emit.call_args[0][0], 'updated_model')
+        self.assertEqual(socketio.emit.call_args[0][1]['class'], 'Message')
+        self.assertEqual(socketio.emit.call_args[0][1]['model']['source'],
+                         'hello *world*!')
         url = h['Location']
 
         # create incomplete message
@@ -51,6 +57,10 @@ class MessageTests(FlackTestCase):
         r, s, h = self.put(url, data={'source': '*hello* world!'},
                            token_auth=token)
         self.assertEqual(s, 204)
+        self.assertEqual(socketio.emit.call_args[0][0], 'updated_model')
+        self.assertEqual(socketio.emit.call_args[0][1]['class'], 'Message')
+        self.assertEqual(socketio.emit.call_args[0][1]['model']['source'],
+                         '*hello* world!')
 
         # check modified message
         r, s, h = self.get(url, token_auth=token)

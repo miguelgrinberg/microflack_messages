@@ -11,6 +11,7 @@ Flask==0.12.1
 Flask-HTTPAuth==3.2.2
 Flask-Migrate==2.0.3
 Flask-Script==2.0.5
+Flask-SocketIO==2.8.6
 Flask-SQLAlchemy==2.2
 html5lib==0.999999999
 itsdangerous==0.24
@@ -22,7 +23,10 @@ MicroFlack-Common==0.3
 PyJWT==1.4.2
 python-dotenv==0.6.4
 python-editor==1.0.3
+python-engineio==1.4.0
 python-etcd==0.4.5
+python-socketio==1.7.4
+redis==2.10.5
 requests==2.13.0
 six==1.10.0
 SQLAlchemy==1.1.6

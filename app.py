@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 from flask import Flask, jsonify, request, abort, g
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
+from flask_socketio import SocketIO
 from markdown import markdown
 import requests
 import threading
@@ -19,6 +20,13 @@ app.config.from_object(getattr(config, config_name.title() + 'Config'))
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+
+message_queue = 'redis://' + os.environ['REDIS'] if 'REDIS' in os.environ \
+    else None
+if message_queue:
+    socketio = SocketIO(message_queue=message_queue)
+else:
+    socketio = None
 
 
 class Message(db.Model):
@@ -93,6 +101,13 @@ class Message(db.Model):
                 self.html += tpl.format(url=url, title=title, desc=description)
                 changed = True
         return changed
+
+
+@db.event.listens_for(Message, 'after_update')
+def after_user_update(mapper, connection, target):
+    if socketio:
+        socketio.emit('updated_model', {'class': target.__class__.__name__,
+                                        'model': target.to_dict()})
 
 
 def render_message(id):
