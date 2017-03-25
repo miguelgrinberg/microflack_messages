@@ -2,6 +2,7 @@ alembic==0.9.1
 beautifulsoup4==4.5.3
 bleach==2.0.0
 bs4==0.0.1
+cachetools==2.0.0
 click==6.7
 dnspython==1.15.0
 docker==2.2.1
@@ -17,7 +18,7 @@ Jinja2==2.9.6
 Mako==1.0.6
 Markdown==2.6.8
 MarkupSafe==1.0
-MicroFlack-Common==0.1
+MicroFlack-Common==0.3
 PyJWT==1.4.2
 python-dotenv==0.6.4
 python-editor==1.0.3
